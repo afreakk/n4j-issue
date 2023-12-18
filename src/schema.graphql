@@ -70,11 +70,13 @@ type OpeningHoursInterval
     name: String
     openingDay: OpeningDay!
         @relationship(type: "HAS_OPEN_INTERVALS", direction: IN)
-    # updatedBy: String
-    #     @populatedBy(
-    #         callback: "getUserIDFromContext"
-    #         operations: [CREATE, UPDATE]
-    #     )
+    createdAt: DateTime! @timestamp(operations: [CREATE])
+    updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+    updatedBy: String
+        @populatedBy(
+            callback: "getUserIDFromContext"
+            operations: [CREATE, UPDATE]
+        )
 }
 
 type MyWorkspace

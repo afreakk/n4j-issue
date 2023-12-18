@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@apollo/server": "^4.9.3",
-    "@neo4j/graphql": "^4.4.0",
+    "@neo4j/graphql": "^4.4.4",
     "graphql": "^16.8.1",
-    "neo4j-driver": "^5.12.0"
+    "neo4j-driver": "^5.15.0"
   }
 }

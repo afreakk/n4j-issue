@@ -61,33 +61,43 @@ describe('testing graphql', async () => {
                 `,
                 variables: {
                     input: {
-                        admins: {
-                            create: {
-                                node: { userId: myUserId },
-                            },
-                        },
                         settings: {
                             create: {
                                 node: {
-                                    myWorkspace: {
-                                        create: {
-                                            node: {
-                                                workspace: 'myWorkspace',
-                                            },
-                                        },
-                                    },
                                     openingDays: {
-                                        create: {
-                                            node: {
-                                                open: {
-                                                    create: {
-                                                        node: {
-                                                            name: 'lambo',
-                                                        },
+                                        create: [
+                                            {
+                                                node: {
+                                                    open: {
+                                                        create: [
+                                                            {
+                                                                node: {
+                                                                    name: 'hi',
+                                                                },
+                                                            },
+                                                        ],
                                                     },
                                                 },
                                             },
-                                        },
+                                            {
+                                                node: {
+                                                    open: {
+                                                        create: [
+                                                            {
+                                                                node: {
+                                                                    name: 'hi',
+                                                                },
+                                                            },
+                                                            {
+                                                                node: {
+                                                                    name: 'hi',
+                                                                },
+                                                            },
+                                                        ],
+                                                    },
+                                                },
+                                            },
+                                        ],
                                     },
                                 },
                             },
