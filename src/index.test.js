@@ -46,13 +46,10 @@ describe('testing graphql', async () => {
                                     userId
                                 }
                                 settings {
-                                    openingDays {
+                                    extendedOpeningHours {
                                         open {
                                             name
                                         }
-                                    }
-                                    myWorkspace {
-                                        workspace
                                     }
                                 }
                             }
@@ -61,33 +58,19 @@ describe('testing graphql', async () => {
                 `,
                 variables: {
                     input: {
+                        admins: {
+                            create: [{ node: { userId: myUserId } }],
+                        },
                         settings: {
                             create: {
                                 node: {
-                                    openingDays: {
+                                    extendedOpeningHours: {
                                         create: [
                                             {
                                                 node: {
+                                                    date: '2024-05-10',
                                                     open: {
                                                         create: [
-                                                            {
-                                                                node: {
-                                                                    name: 'hi',
-                                                                },
-                                                            },
-                                                        ],
-                                                    },
-                                                },
-                                            },
-                                            {
-                                                node: {
-                                                    open: {
-                                                        create: [
-                                                            {
-                                                                node: {
-                                                                    name: 'hi',
-                                                                },
-                                                            },
                                                             {
                                                                 node: {
                                                                     name: 'hi',
@@ -105,11 +88,16 @@ describe('testing graphql', async () => {
                     },
                 },
             },
-            { contextValue: { jwt: { id: myUserId } } }
+            {
+                contextValue: {
+                    jwt: { id: myUserId },
+                },
+            }
         );
         expect(r).toMatchObject({
             body: {
                 singleResult: {
+                    errors: undefined,
                     data: {
                         createTenants: {
                             tenants: [
@@ -122,6 +110,45 @@ describe('testing graphql', async () => {
                     },
                 },
             },
+        });
+        const x = await apolloServer.executeOperation(
+            {
+                query: gql`
+                    mutation {
+                        updateTenants(
+                            update: {
+                                settings: {
+                                    update: {
+                                        node: {
+                                            extendedOpeningHours: [
+                                                { delete: [{ where: null }] }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        ) {
+                            tenants {
+                                settings {
+                                    extendedOpeningHours {
+                                        open {
+                                            name
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                `,
+            },
+            {
+                contextValue: {
+                    jwt: { id: myUserId },
+                },
+            }
+        );
+        expect(x).toMatchObject({
+            body: { singleResult: { errors: undefined } },
         });
     });
 });

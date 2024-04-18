@@ -1,14 +1,10 @@
 type JWT @jwt {
     id: String
 }
-type User
-    @authorization(
-        validate: [
-            { where: { node: { userId: "$jwt.id" } }, operations: [READ] }
-        ]
-    ) {
+type User @authorization(filter: [{ where: { node: { userId: "$jwt.id" } } }]) {
     userId: String! @unique
-    adminAccess: [Tenant!]! @relationship(type: "ADMIN_IN", direction: OUT)
+    adminAccess: [Tenant!]!
+        @relationship(type: "ADMIN_IN", direction: OUT, aggregate: false)
 }
 
 type Tenant
@@ -16,8 +12,10 @@ type Tenant
         validate: [{ where: { node: { admins: { userId: "$jwt.id" } } } }]
     ) {
     id: ID! @id
-    admins: [User!]! @relationship(type: "ADMIN_IN", direction: IN)
-    settings: Settings @relationship(type: "VEHICLECARD_OWNER", direction: IN)
+    admins: [User!]!
+        @relationship(type: "ADMIN_IN", direction: IN, aggregate: false)
+    settings: Settings!
+        @relationship(type: "HAS_SETTINGS", direction: OUT, aggregate: false)
 }
 
 type Settings
@@ -26,12 +24,14 @@ type Settings
             { where: { node: { tenant: { admins: { userId: "$jwt.id" } } } } }
         ]
     ) {
-    id: ID! @id
-    openingDays: [OpeningDay!]!
-        @relationship(type: "VALID_GARAGES", direction: OUT)
-    myWorkspace: MyWorkspace!
-        @relationship(type: "HAS_WORKSPACE_SETTINGS", direction: OUT)
-    tenant: Tenant! @relationship(type: "VEHICLECARD_OWNER", direction: OUT) # <---  this line
+    tenant: Tenant!
+        @relationship(type: "HAS_SETTINGS", direction: IN, aggregate: false)
+    extendedOpeningHours: [OpeningDay!]!
+        @relationship(
+            type: "HAS_OPENING_HOURS"
+            direction: OUT
+            aggregate: false
+        )
 }
 
 type OpeningDay
@@ -46,11 +46,21 @@ type OpeningDay
             }
         ]
     ) {
-    id: ID! @id
-    settings: Settings @relationship(type: "VALID_GARAGES", direction: IN)
+    settings: Settings!
+        @relationship(
+            type: "HAS_OPENING_HOURS"
+            direction: IN
+            aggregate: false
+        )
+    date: Date
     open: [OpeningHoursInterval!]!
-        @relationship(type: "HAS_OPEN_INTERVALS", direction: OUT)
+        @relationship(
+            type: "HAS_OPEN_INTERVALS"
+            direction: OUT
+            aggregate: false
+        )
 }
+
 type OpeningHoursInterval
     @authorization(
         validate: [
@@ -67,36 +77,13 @@ type OpeningHoursInterval
             }
         ]
     ) {
-    name: String
-    openingDay: OpeningDay!
-        @relationship(type: "HAS_OPEN_INTERVALS", direction: IN)
-    createdAt: DateTime! @timestamp(operations: [CREATE])
-    updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
-    updatedBy: String
-        @populatedBy(
-            callback: "getUserIDFromContext"
-            operations: [CREATE, UPDATE]
+    openingDay: OpeningDay
+        @relationship(
+            type: "HAS_OPEN_INTERVALS"
+            direction: IN
+            aggregate: false
         )
+    name: String
 }
 
-type MyWorkspace
-    @authorization(
-        validate: [
-            {
-                where: {
-                    node: {
-                        settings: { tenant: { admins: { userId: "$jwt.id" } } }
-                    }
-                }
-            }
-        ]
-    ) {
-    settings: Settings!
-        @relationship(type: "HAS_WORKSPACE_SETTINGS", direction: IN)
-    workspace: String
-    updatedBy: String
-        @populatedBy(
-            callback: "getUserIDFromContext"
-            operations: [CREATE, UPDATE]
-        )
-}
+extend schema @authentication @query(read: true, aggregate: false)
