@@ -14,76 +14,70 @@ type Tenant
     id: ID! @id
     admins: [User!]!
         @relationship(type: "ADMIN_IN", direction: IN, aggregate: false)
-    settings: Settings!
-        @relationship(type: "HAS_SETTINGS", direction: OUT, aggregate: false)
+    deletedCars: [DeletedCar!]!
+        @relationship(type: "OWNED_BY", direction: IN, aggregate: false)
+    cars: [Car!]!
+        @relationship(type: "OWNED_BY", direction: IN, aggregate: false)
 }
 
-type Settings
-    @authorization(
-        validate: [
-            { where: { node: { tenant: { admins: { userId: "$jwt.id" } } } } }
-        ]
-    ) {
-    tenant: Tenant!
-        @relationship(type: "HAS_SETTINGS", direction: IN, aggregate: false)
-    extendedOpeningHours: [OpeningDay!]!
-        @relationship(
-            type: "HAS_OPENING_HOURS"
-            direction: OUT
-            aggregate: false
-        )
+input DeleteCarInput {
+    carId: ID!
+    reason: String!
 }
-
-type OpeningDay
-    @authorization(
-        validate: [
-            {
-                where: {
-                    node: {
-                        settings: { tenant: { admins: { userId: "$jwt.id" } } }
-                    }
-                }
-            }
-        ]
-    ) {
-    settings: Settings!
-        @relationship(
-            type: "HAS_OPENING_HOURS"
-            direction: IN
-            aggregate: false
-        )
-    date: Date
-    open: [OpeningHoursInterval!]!
-        @relationship(
-            type: "HAS_OPEN_INTERVALS"
-            direction: OUT
-            aggregate: false
+type Mutation {
+    deleteCar(input: DeleteCarInput!): DeletedCar!
+        @cypher(
+            statement: """
+            MATCH(s:Car)
+            WHERE (s.id = $input.carId)
+            REMOVE s:Car
+            SET s:DeletedCar
+            SET s.reason = $input.reason
+            RETURN s AS s
+            """
+            columnName: "s"
         )
 }
 
-type OpeningHoursInterval
+type Car
+    @mutation(operations: [UPDATE])
     @authorization(
         validate: [
-            {
-                where: {
-                    node: {
-                        openingDay: {
-                            settings: {
-                                tenant: { admins: { userId: "$jwt.id" } }
-                            }
-                        }
-                    }
-                }
-            }
+            { where: { node: { owner: { admins: { userId: "$jwt.id" } } } } }
         ]
     ) {
-    openingDay: OpeningDay
-        @relationship(
-            type: "HAS_OPEN_INTERVALS"
-            direction: IN
-            aggregate: false
+    id: ID! @id
+    owner: Tenant!
+        @relationship(type: "OWNED_BY", direction: OUT, aggregate: false)
+    name: String!
+    createdAt: DateTime! @timestamp(operations: [CREATE])
+    updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+    updatedBy: String
+        @populatedBy(
+            callback: "getUserIDFromContext"
+            operations: [CREATE, UPDATE]
         )
-    name: String
+}
+
+type DeletedCar
+    @mutation(operations: [UPDATE])
+    @authorization(
+        validate: [
+            { where: { node: { owner: { admins: { userId: "$jwt.id" } } } } }
+        ]
+    ) {
+    id: ID! @id
+    owner: Tenant!
+        @relationship(type: "OWNED_BY", direction: OUT, aggregate: false)
+    name: String!
+    reason: String!
+    createdAt: DateTime! @timestamp(operations: [CREATE])
+    updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+    updatedBy: String
+        @populatedBy(
+            callback: "getUserIDFromContext"
+            operations: [CREATE, UPDATE]
+        )
 }
 
 extend schema @authentication @query(read: true, aggregate: false)

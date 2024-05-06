@@ -45,12 +45,9 @@ describe('testing graphql', async () => {
                                 admins {
                                     userId
                                 }
-                                settings {
-                                    extendedOpeningHours {
-                                        open {
-                                            name
-                                        }
-                                    }
+                                cars {
+                                    id
+                                    name
                                 }
                             }
                         }
@@ -61,30 +58,7 @@ describe('testing graphql', async () => {
                         admins: {
                             create: [{ node: { userId: myUserId } }],
                         },
-                        settings: {
-                            create: {
-                                node: {
-                                    extendedOpeningHours: {
-                                        create: [
-                                            {
-                                                node: {
-                                                    date: '2024-05-10',
-                                                    open: {
-                                                        create: [
-                                                            {
-                                                                node: {
-                                                                    name: 'hi',
-                                                                },
-                                                            },
-                                                        ],
-                                                    },
-                                                },
-                                            },
-                                        ],
-                                    },
-                                },
-                            },
-                        },
+                        cars: { create: [{ node: { name: 'bmw' } }] },
                     },
                 },
             },
@@ -104,6 +78,7 @@ describe('testing graphql', async () => {
                                 {
                                     id: expect.any(String),
                                     admins: [{ userId: myUserId }],
+                                    cars: [{ name: 'bmw' }],
                                 },
                             ],
                         },
@@ -111,35 +86,22 @@ describe('testing graphql', async () => {
                 },
             },
         });
-        const x = await apolloServer.executeOperation(
+        const o = await apolloServer.executeOperation(
             {
                 query: gql`
-                    mutation {
-                        updateTenants(
-                            update: {
-                                settings: {
-                                    update: {
-                                        node: {
-                                            extendedOpeningHours: [
-                                                { delete: [{ where: null }] }
-                                            ]
-                                        }
-                                    }
-                                }
-                            }
-                        ) {
-                            tenants {
-                                settings {
-                                    extendedOpeningHours {
-                                        open {
-                                            name
-                                        }
-                                    }
-                                }
-                            }
+                    mutation deleteCar($input: DeleteCarInput!) {
+                        deleteCar(input: $input) {
+                            reason
                         }
                     }
                 `,
+                variables: {
+                    input: {
+                        carId: r.body.singleResult.data.createTenants.tenants[0]
+                            .cars[0].id,
+                        reason: 'ugly car',
+                    },
+                },
             },
             {
                 contextValue: {
@@ -147,8 +109,12 @@ describe('testing graphql', async () => {
                 },
             }
         );
-        expect(x).toMatchObject({
-            body: { singleResult: { errors: undefined } },
+        expect(o).toMatchObject({
+            body: {
+                singleResult: {
+                    errors: undefined,
+                },
+            },
         });
     });
 });
