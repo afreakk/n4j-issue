@@ -404,10 +404,10 @@
   resolved "https://registry.yarnpkg.com/@neo4j/cypher-builder/-/cypher-builder-1.15.0.tgz#edeefc7a133cf3a9519fac2d695e8d3b196d35bb"
   integrity sha512-ussVHzLzAsFHriijKJYzD2yhYl8sU/vDb/q9VkQH9dhY9DAzPx09AC5G6kBHZv7Nn+Fz4i8YJkAmGilD7RlICQ==
 
-"@neo4j/graphql@^5.3.2":
-  version "5.3.2"
-  resolved "https://registry.yarnpkg.com/@neo4j/graphql/-/graphql-5.3.2.tgz#468a4bdf3ae6bad4c39944ce16e7697619909504"
-  integrity sha512-nflwh9rXRPXTUalc304VYrbuWJpP5ggHXzDvkeyfDPlV2RduxpiT6vYmq5VMLnAsdzPUfP2ktyCorC7ymZxeYg==
+"@neo4j/graphql@^5.3.5":
+  version "5.3.5"
+  resolved "https://registry.yarnpkg.com/@neo4j/graphql/-/graphql-5.3.5.tgz#7eac84bafba160e6d9c679999e9fa1403b26e1a8"
+  integrity sha512-h28VbMaOrGJ5BqNQ4ZR7/gCs4EMUPytfhvyKgp7lQma0nVng0BEhoKsgJ5GqETeib0BfczwF907RD75vTZ/QHg==
   dependencies:
     "@apollo/subgraph" "^2.2.3"
     "@graphql-tools/merge" "^9.0.0"
