@@ -1,13 +1,16 @@
-import {readFileSync} from 'fs';
-import {ApolloServer} from '@apollo/server';
-import {join} from 'path';
-import {Neo4jGraphQL} from '@neo4j/graphql';
-import {it, describe, expect, test} from 'vitest';
-import {gql} from '@apollo/client/core';
+import { readFileSync } from 'fs';
+import { ApolloServer } from '@apollo/server';
+import { join } from 'path';
+import { Neo4jGraphQL } from '@neo4j/graphql';
+import { it, describe, expect, test } from 'vitest';
+import { gql } from '@apollo/client/core';
 import neo4j from 'neo4j-driver';
 const driver = neo4j.driver(
     process.env.NEO4J_DATABASE_HOST,
-    neo4j.auth.basic(process.env.NEO4J_DATABASE_USERNAME, process.env.NEO4J_DATABASE_PASSWORD)
+    neo4j.auth.basic(
+        process.env.NEO4J_DATABASE_USERNAME,
+        process.env.NEO4J_DATABASE_PASSWORD
+    )
 );
 const laterResolvedValues = (type) => {
     const values = {};
@@ -18,13 +21,36 @@ const laterResolvedValues = (type) => {
     const set = (key, value) => {
         values[key] = value;
     };
-    return {set, get};
+    return { set, get };
 };
 
 describe('testing graphql', async () => {
     await driver.session().run(` match (n) detach delete n`);
     const myUserId = Math.random().toString(36).slice(2, 7);
-    const neo4jGraphql = new Neo4jGraphQL({typeDefs: readFileSync(join(__dirname, 'schema.graphql'), 'utf8').toString(), driver});
+    const usernameCallback = (_parent, _args, context) => {
+        const userId = context.jwt?.id;
+
+        if (typeof userId === 'string') {
+            return userId;
+        }
+        return undefined;
+    };
+
+    const features = {
+        populatedBy: {
+            callbacks: {
+                getUserIDFromContext: usernameCallback,
+            },
+        },
+    };
+    const neo4jGraphql = new Neo4jGraphQL({
+        features,
+        typeDefs: readFileSync(
+            join(__dirname, 'schema.graphql'),
+            'utf8'
+        ).toString(),
+        driver,
+    });
     const apolloServer = new ApolloServer({
         schema: await neo4jGraphql.getSchema(),
         introspection: true,
@@ -47,14 +73,14 @@ describe('testing graphql', async () => {
             input: {
                 admins: {
                     create: {
-                        node: {userId: myUserId},
+                        node: { userId: myUserId },
                     },
-                }
+                },
             },
         };
         const r = await apolloServer.executeOperation(
-            {query: ADD_TENANT, variables: tenantVariables},
-            {contextValue: {jwt: {id: myUserId}}}
+            { query: ADD_TENANT, variables: tenantVariables },
+            { contextValue: { jwt: { id: myUserId, roles: ['overlord'] } } }
         );
         expect(r).toMatchObject({
             body: {
@@ -62,7 +88,10 @@ describe('testing graphql', async () => {
                     data: {
                         createTenants: {
                             tenants: [
-                                {id: expect.any(String), admins: [{userId: myUserId}]},
+                                {
+                                    id: expect.any(String),
+                                    admins: [{ userId: myUserId }],
+                                },
                             ],
                         },
                     },
@@ -70,7 +99,10 @@ describe('testing graphql', async () => {
             },
         });
         l.set('tenantId', r.body.singleResult.data.createTenants.tenants[0].id);
-        l.set('userId', r.body.singleResult.data.createTenants.tenants[0].admins[0].userId);
+        l.set(
+            'userId',
+            r.body.singleResult.data.createTenants.tenants[0].admins[0].userId
+        );
     });
     it('create garage', async () => {
         const ADD_GARAGES = gql`
@@ -94,13 +126,22 @@ describe('testing graphql', async () => {
             },
         });
         const r = await apolloServer.executeOperation(
-            {query: ADD_GARAGES, variables: {input: garageInput(l.get('tenantId'))}},
-            {contextValue: {jwt: {id: l.get('userId')}}}
+            {
+                query: ADD_GARAGES,
+                variables: { input: garageInput(l.get('tenantId')) },
+            },
+            { contextValue: { jwt: { id: myUserId, roles: ['overlord'] } } }
         );
         expect(r).toMatchObject({
             body: {
-                singleResult: {data: {createGarages: {garages: [{id: expect.any(String)}]}}},
-            }
+                singleResult: {
+                    data: {
+                        createGarages: {
+                            garages: [{ id: expect.any(String) }],
+                        },
+                    },
+                },
+            },
         });
         l.set('garageId', r.body.singleResult.data.createGarages.garages[0].id);
     });
@@ -114,7 +155,7 @@ describe('testing graphql', async () => {
                 }
             }
         `;
-        const vehiclecardInput = ({garageId, tenantId}) => ({
+        const vehiclecardInput = ({ garageId, tenantId }) => ({
             tenant: {
                 connect: {
                     where: {
@@ -144,14 +185,18 @@ describe('testing graphql', async () => {
                     }),
                 },
             },
-            {contextValue: {jwt: {id: l.get('userId')}}}
+            { contextValue: { jwt: { id: myUserId, roles: ['overlord'] } } }
         );
         expect(r).toMatchObject({
             body: {
                 singleResult: {
-                    data: {createVehicleCards: {vehicleCards: [{id: expect.any(String)}]}},
+                    data: {
+                        createVehicleCards: {
+                            vehicleCards: [{ id: expect.any(String) }],
+                        },
+                    },
                 },
             },
         });
     });
-})
+});
